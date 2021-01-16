@@ -1,3 +1,36 @@
+## 1.12.1 / 2022-01-29
+
+* [BUGFIX] Make the Go 1.17 collector concurrency-safe #969
+  * Use simpler locking in the Go 1.17 collector #975
+* [BUGFIX] Reduce granularity of histogram buckets for Go 1.17 collector #974
+* [ENHANCEMENT] API client: make HTTP reads more efficient #976
+
+## 1.12.0 / 2022-01-19
+
+* [CHANGE] example/random: Move flags and metrics into main() #935
+* [FEATURE] API client: Support wal replay status api #944
+* [FEATURE] Use the runtime/metrics package for the Go collector for 1.17+ #955
+* [ENHANCEMENT] API client: Update /api/v1/status/tsdb to include headStats #925
+* [ENHANCEMENT] promhttp: Check validity of method and code label values #962
+
+## 1.11.0 / 2021-06-07
+
+* [CHANGE] Add new collectors package. #862
+* [CHANGE] `prometheus.NewExpvarCollector` is deprecated, use `collectors.NewExpvarCollector` instead. #862
+* [CHANGE] `prometheus.NewGoCollector` is deprecated, use `collectors.NewGoCollector` instead. #862
+* [CHANGE] `prometheus.NewBuildInfoCollector` is deprecated, use `collectors.NewBuildInfoCollector` instead. #862
+* [FEATURE] Add new collector for database/sql#DBStats. #866
+* [FEATURE] API client: Add exemplars API support. #861
+* [ENHANCEMENT] API client: Add newer fields to Rules API. #855
+* [ENHANCEMENT] API client: Add missing fields to Targets API. #856
+
+## 1.10.0 / 2021-03-18
+
+* [CHANGE] Minimum required Go version is now 1.13.
+* [CHANGE] API client: Add matchers to `LabelNames` and `LabesValues`. #828
+* [FEATURE] API client: Add buildinfo call. #841
+* [BUGFIX] Fix build on riscv64. #833
+
 ## 1.9.0 / 2020-12-17
 
 * [FEATURE] `NewPidFileFn` helper to create process collectors for processes whose PID is read from a file. #804
@@ -7,7 +40,7 @@
 
 * [CHANGE] API client: Use `time.Time` rather than `string` for timestamps in `RuntimeinfoResult`. #777
 * [FEATURE] Export `MetricVec` to facilitate implementation of vectors of custom `Metric` types. #803
-* [FEATURE API client: Support `/status/tsdb` endpoint. #773
+* [FEATURE] API client: Support `/status/tsdb` endpoint. #773
 * [ENHANCEMENT] API client: Enable GET fallback on status code 501. #802
 * [ENHANCEMENT] Remove `Metric` references after reslicing to free up more memory. #784
 
@@ -87,6 +120,7 @@ _This release removes all previously deprecated features, resulting in the break
 * [BUGFIX] Make `AlreadyRegisteredError` usable for wrapped registries. #607
 
 ## 0.9.4 / 2019-06-07
+
 * [CHANGE] API client: Switch to alert values as strings. #585
 * [FEATURE] Add a collector for Go module build information. #595
 * [FEATURE] promhttp: Add an counter for internal errors during HTTP exposition. #594
@@ -96,6 +130,7 @@ _This release removes all previously deprecated features, resulting in the break
 * [BUGFIX] Reduce test flakiness. #573
 
 ## 0.9.3 / 2019-05-16
+
 * [CHANGE] Required Go version is now 1.9+. #561
 * [FEATURE] API client: Add POST with get fallback for Query/QueryRange. #557
 * [FEATURE] API client: Add alerts endpoint. #552
@@ -117,14 +152,16 @@ _This release removes all previously deprecated features, resulting in the break
 * [BUGFIX] API client: Deal with discovered labels properly. #529
 
 ## 0.9.2 / 2018-12-06
+
 * [FEATURE] Support for Go modules. #501
 * [FEATURE] `Timer.ObserveDuration` returns observed duration. #509
-* [ENHANCEMENT] Improved doc comments and error messages. #504 
+* [ENHANCEMENT] Improved doc comments and error messages. #504
 * [BUGFIX] Fix race condition during metrics gathering. #512
 * [BUGFIX] Fix testutil metric comparison for Histograms and empty labels. #494
   #498
 
 ## 0.9.1 / 2018-11-03
+
 * [FEATURE] Add `WriteToTextfile` function to facilitate the creation of
   *.prom files for the textfile collector of the node exporter. #489
 * [ENHANCEMENT] More descriptive error messages for inconsistent label
@@ -137,6 +174,7 @@ _This release removes all previously deprecated features, resulting in the break
   #479
 
 ## 0.9.0 / 2018-10-15
+
 * [CHANGE] Go1.6 is no longer supported.
 * [CHANGE] More refinements of the `Registry` consistency checks: Duplicated
   labels are now detected, but inconsistent label dimensions are now allowed.
@@ -189,6 +227,7 @@ _This release removes all previously deprecated features, resulting in the break
   responses. #476 #414
 
 ## 0.8.0 / 2016-08-17
+
 * [CHANGE] Registry is doing more consistency checks. This might break
   existing setups that used to export inconsistent metrics.
 * [CHANGE] Pushing to Pushgateway moved to package `push` and changed to allow
@@ -212,6 +251,7 @@ _This release removes all previously deprecated features, resulting in the break
 * [BUGFIX] Handle collisions in MetricVec.
 
 ## 0.7.0 / 2015-07-27
+
 * [CHANGE] Rename ExporterLabelPrefix to ExportedLabelPrefix.
 * [BUGFIX] Closed gaps in metric consistency check.
 * [BUGFIX] Validate LabelName/LabelSet on JSON unmarshaling.
@@ -222,12 +262,14 @@ _This release removes all previously deprecated features, resulting in the break
 * [ENHANCEMENT] Change responseWriterDelegator.written to int64.
 
 ## 0.6.0 / 2015-06-01
+
 * [CHANGE] Rename process_goroutines to go_goroutines.
 * [ENHANCEMENT] Validate label names during YAML decoding.
 * [ENHANCEMENT] Add LabelName regular expression.
 * [BUGFIX] Ensure alignment of struct members for 32-bit systems.
 
 ## 0.5.0 / 2015-05-06
+
 * [BUGFIX] Removed a weakness in the fingerprinting aka signature code.
   This makes fingerprinting slower and more allocation-heavy, but the
   weakness was too severe to be tolerated.
@@ -246,6 +288,7 @@ _This release removes all previously deprecated features, resulting in the break
 * [CHANGE] A number of new reserved labels and prefixes.
 
 ## 0.4.0 / 2015-04-08
+
 * [CHANGE] Return NaN when Summaries have no observations yet.
 * [BUGFIX] Properly handle Summary decay upon Write().
 * [BUGFIX] Fix the documentation link to the consumption library.
@@ -255,16 +298,19 @@ _This release removes all previously deprecated features, resulting in the break
 * [MAINTENANCE] Adjusted to changes in matttproud/golang_protobuf_extensions.
 
 ## 0.3.2 / 2015-03-11
+
 * [BUGFIX] Fixed the receiver type of COWMetric.Set(). This method is
   only used by the Prometheus server internally.
 * [CLEANUP] Added licenses of vendored code left out by godep.
 
 ## 0.3.1 / 2015-03-04
+
 * [ENHANCEMENT] Switched fingerprinting functions from own free list to
   sync.Pool.
 * [CHANGE] Makefile uses Go 1.4.2 now (only relevant for examples and tests).
 
 ## 0.3.0 / 2015-03-03
+
 * [CHANGE] Changed the fingerprinting for metrics. THIS WILL INVALIDATE ALL
   PERSISTED FINGERPRINTS. IF YOU COMPILE THE PROMETHEUS SERVER WITH THIS
   VERSION, YOU HAVE TO WIPE THE PREVIOUSLY CREATED STORAGE.
@@ -279,6 +325,7 @@ _This release removes all previously deprecated features, resulting in the break
   require fewer allocations than the ones currently used by the server.
 
 ## 0.2.0 / 2015-02-23
+
 * [FEATURE] Introduce new Histagram metric type.
 * [CHANGE] Ignore process collector errors for now (better error handling
   pending).
@@ -295,5 +342,6 @@ _This release removes all previously deprecated features, resulting in the break
 * [CLEANUP] Updated vendoring of beorn7/perks.
 
 ## 0.1.0 / 2015-02-02
+
 * [CLEANUP] Introduced semantic versioning and changelog. From now on,
   changes will be reported in this file.

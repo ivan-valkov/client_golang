@@ -36,7 +36,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -154,7 +153,7 @@ func HandlerFor(reg prometheus.Gatherer, opts HandlerOpts) http.Handler {
 		header.Set(contentTypeHeader, string(contentType))
 
 		w := io.Writer(rsp)
-		if !opts.DisableCompression && gzipAccepted(req.Header) {
+		if !opts.DisableCompression && GzipAccepted(req.Header) {
 			header.Set(contentEncodingHeader, "gzip")
 			gz := gzipPool.Get().(*gzip.Writer)
 			defer gzipPool.Put(gz)
@@ -356,15 +355,10 @@ type HandlerOpts struct {
 	EnableOpenMetrics bool
 }
 
-// gzipAccepted returns whether the client will accept gzip-encoded content.
-func gzipAccepted(header http.Header) bool {
-	a := header.Get(acceptEncodingHeader)
-	parts := strings.Split(a, ",")
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part == "gzip" || strings.HasPrefix(part, "gzip;") {
-			return true
-		}
+// GzipAccepted returns whether the client will accept gzip-encoded content.
+func GzipAccepted(header http.Header) bool {
+	if header.Get(acceptEncodingHeader) == "gzip" {
+		return true
 	}
 	return false
 }

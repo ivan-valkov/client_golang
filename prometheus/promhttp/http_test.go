@@ -15,7 +15,9 @@ package promhttp
 
 import (
 	"bytes"
+	"compress/gzip"
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -246,6 +248,42 @@ func TestHandlerMaxRequestsInFlight(t *testing.T) {
 
 	if got, want := w3.Code, http.StatusOK; got != want {
 		t.Errorf("got HTTP status code %d, want %d", got, want)
+	}
+}
+
+func TestHandlerGzip(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	cnt := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "the_count",
+		Help: "Ah-ah-ah! Thunder and lightning!",
+	})
+	reg.MustRegister(cnt)
+	cnt.Add(5)
+
+	handler := HandlerFor(reg, HandlerOpts{DisableCompression: false})
+	w := httptest.NewRecorder()
+
+	request, _ := http.NewRequest("GET", "/", nil)
+	request.Header.Add("Accept", "test/plain")
+	request.Header.Add("Accept-Encoding", "gzip")
+	handler.ServeHTTP(w, request)
+
+	if got, want := w.Code, http.StatusOK; got != want {
+		t.Errorf("got HTTP status code %d, want %d", got, want)
+	}
+
+	reader, err := gzip.NewReader(w.Body)
+	if err != nil {
+		t.Errorf("got invalid body: %s", err)
+	}
+	defer reader.Close()
+	result := make([]byte, 200)
+	_, err = reader.Read(result)
+	if err != io.EOF {
+		t.Errorf("could not read compressed body: %s", err)
+	}
+	if !strings.Contains(string(result), "the_count 5"){
+		t.Errorf("expected metric not found in result: %s", result)
 	}
 }
 

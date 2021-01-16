@@ -144,6 +144,13 @@ func TestAPIs(t *testing.T) {
 		}
 	}
 
+	doBuildinfo := func() func() (interface{}, Warnings, error) {
+		return func() (interface{}, Warnings, error) {
+			v, err := promAPI.Buildinfo(context.Background())
+			return v, nil, err
+		}
+	}
+
 	doRuntimeinfo := func() func() (interface{}, Warnings, error) {
 		return func() (interface{}, Warnings, error) {
 			v, err := promAPI.Runtimeinfo(context.Background())
@@ -151,15 +158,15 @@ func TestAPIs(t *testing.T) {
 		}
 	}
 
-	doLabelNames := func(label string) func() (interface{}, Warnings, error) {
+	doLabelNames := func(matches []string) func() (interface{}, Warnings, error) {
 		return func() (interface{}, Warnings, error) {
-			return promAPI.LabelNames(context.Background(), time.Now().Add(-100*time.Hour), time.Now())
+			return promAPI.LabelNames(context.Background(), matches, time.Now().Add(-100*time.Hour), time.Now())
 		}
 	}
 
-	doLabelValues := func(label string) func() (interface{}, Warnings, error) {
+	doLabelValues := func(matches []string, label string) func() (interface{}, Warnings, error) {
 		return func() (interface{}, Warnings, error) {
-			return promAPI.LabelValues(context.Background(), label, time.Now().Add(-100*time.Hour), time.Now())
+			return promAPI.LabelValues(context.Background(), label, matches, time.Now().Add(-100*time.Hour), time.Now())
 		}
 	}
 
@@ -219,6 +226,20 @@ func TestAPIs(t *testing.T) {
 	doTSDB := func() func() (interface{}, Warnings, error) {
 		return func() (interface{}, Warnings, error) {
 			v, err := promAPI.TSDB(context.Background())
+			return v, nil, err
+		}
+	}
+
+	doWalReply := func() func() (interface{}, Warnings, error) {
+		return func() (interface{}, Warnings, error) {
+			v, err := promAPI.WalReplay(context.Background())
+			return v, nil, err
+		}
+	}
+
+	doQueryExemplars := func(query string, startTime time.Time, endTime time.Time) func() (interface{}, Warnings, error) {
+		return func() (interface{}, Warnings, error) {
+			v, err := promAPI.QueryExemplars(context.Background(), query, startTime, endTime)
 			return v, nil, err
 		}
 	}
@@ -359,14 +380,14 @@ func TestAPIs(t *testing.T) {
 		},
 
 		{
-			do:        doLabelNames("mylabel"),
+			do:        doLabelNames(nil),
 			inRes:     []string{"val1", "val2"},
 			reqMethod: "GET",
 			reqPath:   "/api/v1/labels",
 			res:       []string{"val1", "val2"},
 		},
 		{
-			do:         doLabelNames("mylabel"),
+			do:         doLabelNames(nil),
 			inRes:      []string{"val1", "val2"},
 			inWarnings: []string{"a"},
 			reqMethod:  "GET",
@@ -376,14 +397,14 @@ func TestAPIs(t *testing.T) {
 		},
 
 		{
-			do:        doLabelNames("mylabel"),
+			do:        doLabelNames(nil),
 			inErr:     fmt.Errorf("some error"),
 			reqMethod: "GET",
 			reqPath:   "/api/v1/labels",
 			err:       fmt.Errorf("some error"),
 		},
 		{
-			do:         doLabelNames("mylabel"),
+			do:         doLabelNames(nil),
 			inErr:      fmt.Errorf("some error"),
 			inWarnings: []string{"a"},
 			reqMethod:  "GET",
@@ -391,16 +412,24 @@ func TestAPIs(t *testing.T) {
 			err:        fmt.Errorf("some error"),
 			warnings:   []string{"a"},
 		},
+		{
+			do:        doLabelNames([]string{"up"}),
+			inRes:     []string{"val1", "val2"},
+			reqMethod: "GET",
+			reqPath:   "/api/v1/labels",
+			reqParam:  url.Values{"match[]": {"up"}},
+			res:       []string{"val1", "val2"},
+		},
 
 		{
-			do:        doLabelValues("mylabel"),
+			do:        doLabelValues(nil, "mylabel"),
 			inRes:     []string{"val1", "val2"},
 			reqMethod: "GET",
 			reqPath:   "/api/v1/label/mylabel/values",
 			res:       model.LabelValues{"val1", "val2"},
 		},
 		{
-			do:         doLabelValues("mylabel"),
+			do:         doLabelValues(nil, "mylabel"),
 			inRes:      []string{"val1", "val2"},
 			inWarnings: []string{"a"},
 			reqMethod:  "GET",
@@ -410,20 +439,28 @@ func TestAPIs(t *testing.T) {
 		},
 
 		{
-			do:        doLabelValues("mylabel"),
+			do:        doLabelValues(nil, "mylabel"),
 			inErr:     fmt.Errorf("some error"),
 			reqMethod: "GET",
 			reqPath:   "/api/v1/label/mylabel/values",
 			err:       fmt.Errorf("some error"),
 		},
 		{
-			do:         doLabelValues("mylabel"),
+			do:         doLabelValues(nil, "mylabel"),
 			inErr:      fmt.Errorf("some error"),
 			inWarnings: []string{"a"},
 			reqMethod:  "GET",
 			reqPath:    "/api/v1/label/mylabel/values",
 			err:        fmt.Errorf("some error"),
 			warnings:   []string{"a"},
+		},
+		{
+			do:        doLabelValues([]string{"up"}, "mylabel"),
+			inRes:     []string{"val1", "val2"},
+			reqMethod: "GET",
+			reqPath:   "/api/v1/label/mylabel/values",
+			reqParam:  url.Values{"match[]": {"up"}},
+			res:       model.LabelValues{"val1", "val2"},
 		},
 
 		{
@@ -620,6 +657,36 @@ func TestAPIs(t *testing.T) {
 		},
 
 		{
+			do:        doBuildinfo(),
+			reqMethod: "GET",
+			reqPath:   "/api/v1/status/buildinfo",
+			inErr:     fmt.Errorf("some error"),
+			err:       fmt.Errorf("some error"),
+		},
+
+		{
+			do:        doBuildinfo(),
+			reqMethod: "GET",
+			reqPath:   "/api/v1/status/buildinfo",
+			inRes: map[string]interface{}{
+				"version":   "2.23.0",
+				"revision":  "26d89b4b0776fe4cd5a3656dfa520f119a375273",
+				"branch":    "HEAD",
+				"buildUser": "root@37609b3a0a21",
+				"buildDate": "20201126-10:56:17",
+				"goVersion": "go1.15.5",
+			},
+			res: BuildinfoResult{
+				Version:   "2.23.0",
+				Revision:  "26d89b4b0776fe4cd5a3656dfa520f119a375273",
+				Branch:    "HEAD",
+				BuildUser: "root@37609b3a0a21",
+				BuildDate: "20201126-10:56:17",
+				GoVersion: "go1.15.5",
+			},
+		},
+
+		{
 			do:        doRuntimeinfo(),
 			reqMethod: "GET",
 			reqPath:   "/api/v1/status/runtimeinfo",
@@ -636,8 +703,6 @@ func TestAPIs(t *testing.T) {
 				"CWD":                 "/prometheus",
 				"reloadConfigSuccess": true,
 				"lastConfigTime":      "2020-05-18T15:52:56Z",
-				"chunkCount":          72692,
-				"timeSeriesCount":     18476,
 				"corruptionCount":     0,
 				"goroutineCount":      217,
 				"GOMAXPROCS":          2,
@@ -650,8 +715,6 @@ func TestAPIs(t *testing.T) {
 				CWD:                 "/prometheus",
 				ReloadConfigSuccess: true,
 				LastConfigTime:      time.Date(2020, 5, 18, 15, 52, 56, 0, time.UTC),
-				ChunkCount:          72692,
-				TimeSeriesCount:     18476,
 				CorruptionCount:     0,
 				GoroutineCount:      217,
 				GOMAXPROCS:          2,
@@ -793,6 +856,111 @@ func TestAPIs(t *testing.T) {
 			},
 		},
 
+		// This has the newer API elements like lastEvaluation, evaluationTime, etc.
+		{
+			do:        doRules(),
+			reqMethod: "GET",
+			reqPath:   "/api/v1/rules",
+			inRes: map[string]interface{}{
+				"groups": []map[string]interface{}{
+					{
+						"file":     "/rules.yaml",
+						"interval": 60,
+						"name":     "example",
+						"rules": []map[string]interface{}{
+							{
+								"alerts": []map[string]interface{}{
+									{
+										"activeAt": testTime.UTC().Format(time.RFC3339Nano),
+										"annotations": map[string]interface{}{
+											"summary": "High request latency",
+										},
+										"labels": map[string]interface{}{
+											"alertname": "HighRequestLatency",
+											"severity":  "page",
+										},
+										"state": "firing",
+										"value": "1e+00",
+									},
+								},
+								"annotations": map[string]interface{}{
+									"summary": "High request latency",
+								},
+								"duration": 600,
+								"health":   "ok",
+								"labels": map[string]interface{}{
+									"severity": "page",
+								},
+								"name":           "HighRequestLatency",
+								"query":          "job:request_latency_seconds:mean5m{job=\"myjob\"} > 0.5",
+								"type":           "alerting",
+								"evaluationTime": 0.5,
+								"lastEvaluation": "2020-05-18T15:52:53.4503113Z",
+								"state":          "firing",
+							},
+							{
+								"health":         "ok",
+								"name":           "job:http_inprogress_requests:sum",
+								"query":          "sum(http_inprogress_requests) by (job)",
+								"type":           "recording",
+								"evaluationTime": 0.3,
+								"lastEvaluation": "2020-05-18T15:52:53.4503113Z",
+							},
+						},
+					},
+				},
+			},
+			res: RulesResult{
+				Groups: []RuleGroup{
+					{
+						Name:     "example",
+						File:     "/rules.yaml",
+						Interval: 60,
+						Rules: []interface{}{
+							AlertingRule{
+								Alerts: []*Alert{
+									{
+										ActiveAt: testTime.UTC(),
+										Annotations: model.LabelSet{
+											"summary": "High request latency",
+										},
+										Labels: model.LabelSet{
+											"alertname": "HighRequestLatency",
+											"severity":  "page",
+										},
+										State: AlertStateFiring,
+										Value: "1e+00",
+									},
+								},
+								Annotations: model.LabelSet{
+									"summary": "High request latency",
+								},
+								Labels: model.LabelSet{
+									"severity": "page",
+								},
+								Duration:       600,
+								Health:         RuleHealthGood,
+								Name:           "HighRequestLatency",
+								Query:          "job:request_latency_seconds:mean5m{job=\"myjob\"} > 0.5",
+								LastError:      "",
+								EvaluationTime: 0.5,
+								LastEvaluation: time.Date(2020, 5, 18, 15, 52, 53, 450311300, time.UTC),
+								State:          "firing",
+							},
+							RecordingRule{
+								Health:         RuleHealthGood,
+								Name:           "job:http_inprogress_requests:sum",
+								Query:          "sum(http_inprogress_requests) by (job)",
+								LastError:      "",
+								EvaluationTime: 0.3,
+								LastEvaluation: time.Date(2020, 5, 18, 15, 52, 53, 450311300, time.UTC),
+							},
+						},
+					},
+				},
+			},
+		},
+
 		{
 			do:        doRules(),
 			reqMethod: "GET",
@@ -818,10 +986,13 @@ func TestAPIs(t *testing.T) {
 							"instance": "127.0.0.1:9090",
 							"job":      "prometheus",
 						},
-						"scrapeUrl":  "http://127.0.0.1:9090",
-						"lastError":  "error while scraping target",
-						"lastScrape": testTime.UTC().Format(time.RFC3339Nano),
-						"health":     "up",
+						"scrapePool":         "prometheus",
+						"scrapeUrl":          "http://127.0.0.1:9090",
+						"globalUrl":          "http://127.0.0.1:9090",
+						"lastError":          "error while scraping target",
+						"lastScrape":         testTime.UTC().Format(time.RFC3339Nano),
+						"lastScrapeDuration": 0.001146115,
+						"health":             "up",
 					},
 				},
 				"droppedTargets": []map[string]interface{}{
@@ -848,10 +1019,13 @@ func TestAPIs(t *testing.T) {
 							"instance": "127.0.0.1:9090",
 							"job":      "prometheus",
 						},
-						ScrapeURL:  "http://127.0.0.1:9090",
-						LastError:  "error while scraping target",
-						LastScrape: testTime.UTC(),
-						Health:     HealthGood,
+						ScrapePool:         "prometheus",
+						ScrapeURL:          "http://127.0.0.1:9090",
+						GlobalURL:          "http://127.0.0.1:9090",
+						LastError:          "error while scraping target",
+						LastScrape:         testTime.UTC(),
+						LastScrapeDuration: 0.001146115,
+						Health:             HealthGood,
 					},
 				},
 				Dropped: []DroppedTarget{
@@ -974,6 +1148,13 @@ func TestAPIs(t *testing.T) {
 			reqMethod: "GET",
 			reqPath:   "/api/v1/status/tsdb",
 			inRes: map[string]interface{}{
+				"headStats": map[string]interface{}{
+					"numSeries":     18476,
+					"numLabelPairs": 4301,
+					"chunkCount":    72692,
+					"minTime":       1634644800304,
+					"maxTime":       1634650590304,
+				},
 				"seriesCountByMetricName": []interface{}{
 					map[string]interface{}{
 						"name":  "kubelet_http_requests_duration_seconds_bucket",
@@ -1000,6 +1181,13 @@ func TestAPIs(t *testing.T) {
 				},
 			},
 			res: TSDBResult{
+				HeadStats: TSDBHeadStats{
+					NumSeries:     18476,
+					NumLabelPairs: 4301,
+					ChunkCount:    72692,
+					MinTime:       1634644800304,
+					MaxTime:       1634650590304,
+				},
 				SeriesCountByMetricName: []Stat{
 					{
 						Name:  "kubelet_http_requests_duration_seconds_bucket",
@@ -1022,6 +1210,90 @@ func TestAPIs(t *testing.T) {
 					{
 						Name:  "job=kubelet",
 						Value: 30000,
+					},
+				},
+			},
+		},
+
+		{
+			do:        doWalReply(),
+			reqMethod: "GET",
+			reqPath:   "/api/v1/status/walreplay",
+			inErr:     fmt.Errorf("some error"),
+			err:       fmt.Errorf("some error"),
+		},
+
+		{
+			do:        doWalReply(),
+			reqMethod: "GET",
+			reqPath:   "/api/v1/status/walreplay",
+			inRes: map[string]interface{}{
+				"min":     2,
+				"max":     5,
+				"current": 40,
+			},
+			res: WalReplayStatus{
+				Min:     2,
+				Max:     5,
+				Current: 40,
+			},
+		},
+
+		{
+			do:        doQueryExemplars("tns_request_duration_seconds_bucket", testTime.Add(-1*time.Minute), testTime),
+			reqMethod: "GET",
+			reqPath:   "/api/v1/query_exemplars",
+			inErr:     fmt.Errorf("some error"),
+			err:       fmt.Errorf("some error"),
+		},
+
+		{
+			do:        doQueryExemplars("tns_request_duration_seconds_bucket", testTime.Add(-1*time.Minute), testTime),
+			reqMethod: "GET",
+			reqPath:   "/api/v1/query_exemplars",
+			inRes: []interface{}{
+				map[string]interface{}{
+					"seriesLabels": map[string]interface{}{
+						"__name__": "tns_request_duration_seconds_bucket",
+						"instance": "app:80",
+						"job":      "tns/app",
+					},
+					"exemplars": []interface{}{
+						map[string]interface{}{
+							"labels": map[string]interface{}{
+								"traceID": "19fd8c8a33975a23",
+							},
+							"value":     "0.003863295",
+							"timestamp": model.TimeFromUnixNano(testTime.UnixNano()),
+						},
+						map[string]interface{}{
+							"labels": map[string]interface{}{
+								"traceID": "67f743f07cc786b0",
+							},
+							"value":     "0.001535405",
+							"timestamp": model.TimeFromUnixNano(testTime.UnixNano()),
+						},
+					},
+				},
+			},
+			res: []ExemplarQueryResult{
+				{
+					SeriesLabels: model.LabelSet{
+						"__name__": "tns_request_duration_seconds_bucket",
+						"instance": "app:80",
+						"job":      "tns/app",
+					},
+					Exemplars: []Exemplar{
+						{
+							Labels:    model.LabelSet{"traceID": "19fd8c8a33975a23"},
+							Value:     0.003863295,
+							Timestamp: model.TimeFromUnixNano(testTime.UnixNano()),
+						},
+						{
+							Labels:    model.LabelSet{"traceID": "67f743f07cc786b0"},
+							Value:     0.001535405,
+							Timestamp: model.TimeFromUnixNano(testTime.UnixNano()),
+						},
 					},
 				},
 			},
